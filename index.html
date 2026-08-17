@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Inventory Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Smart Inventory Dashboard</h1>
+            <p>Manage stock clearly and keep your business organized.</p>
+        </header>
+
+        <section class="dashboard">
+            <div class="card">
+                <h3>Total Products</h3>
+                <h2 id="totalProducts">0</h2>
+            </div>
+            <div class="card">
+                <h3>Low Stock</h3>
+                <h2 id="lowStock">0</h2>
+            </div>
+            <div class="card">
+                <h3>Total Inventory Value</h3>
+                <h2 id="inventoryValue">$0</h2>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2>Add Product</h2>
+
+            <div class="form-grid">
+                <input type="text" id="productName" placeholder="Product Name">
+                <select id="category" title="Category">
+                    <option>Electronics</option>
+                    <option>Groceries</option>
+                    <option>Fashion</option>
+                    <option>Furniture</option>
+                </select>
+                <input type="number" id="price" placeholder="Price">
+                <input type="number" id="quantity" placeholder="Quantity">
+            </div>
+
+            <div id="statusMessage" class="status-message" aria-live="polite"></div>
+            <button id="addBtn">Add Product</button>
+        </section>
+
+        <section class="search">
+            <input type="text" id="search" placeholder="Search Products...">
+        </section>
+
+        <section>
+            <h2>Products Inventory</h2>
+            <div id="productContainer"></div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+
+    <footer>
+        <p>© 2026 Smart Inventory Management</p>
+    </footer>
+</body>
+</html>
