@@ -2,7 +2,13 @@
   {
     "name": "Phone",
     "category": "Electronics",
+    "price": 12,
+    "quantity": 8
+  },
+  {
+    "name": "mango",
+    "category": "Groceries",
     "price": 10,
-    "quantity": 4
+    "quantity": 20
   }
 ]
