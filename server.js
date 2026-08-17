@@ -1,6 +1,7 @@
-const fs = require("fs");
-const path = require("path");
+require("dotenv").config();
 const express = require("express");
+const path = require("path");
+const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
 
@@ -8,25 +9,39 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Serve static files from the project root so index.html is reachable
 app.use(express.static(path.join(__dirname)));
 
-// Data file (matches existing file in the repo)
-const DATA_FILE = path.join(__dirname, "product.json");
+
+// ===============================
+// SUPABASE
+// ===============================
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_PUBLISHABLE_KEY
+);
 
 
 // ===============================
 // GET PRODUCTS
 // ===============================
 
-app.get("/products", function (req, res) {
+app.get("/products", async function (req, res) {
 
-    const data = fs.readFileSync(DATA_FILE, "utf8");
+    const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("id", { ascending: true });
 
-    const products = JSON.parse(data);
+    if (error) {
+        console.error(error);
 
-    res.json(products);
+        return res.status(500).json({
+            message: "Could not load products"
+        });
+    }
 
+    res.json(data);
 });
 
 
@@ -34,25 +49,27 @@ app.get("/products", function (req, res) {
 // ADD PRODUCT
 // ===============================
 
-app.post("/products", function (req, res) {
+app.post("/products", async function (req, res) {
 
     const newProduct = req.body;
 
-    const data = fs.readFileSync(DATA_FILE, "utf8");
+    const { data, error } = await supabase
+        .from("products")
+        .insert([newProduct])
+        .select();
 
-    const products = JSON.parse(data);
+    if (error) {
+        console.error(error);
 
-    products.push(newProduct);
-
-    fs.writeFileSync(
-        DATA_FILE,
-        JSON.stringify(products, null, 2)
-    );
+        return res.status(500).json({
+            message: "Could not add product"
+        });
+    }
 
     res.json({
-        message: "Product added successfully"
+        message: "Product added successfully",
+        product: data[0]
     });
-
 });
 
 
@@ -60,39 +77,36 @@ app.post("/products", function (req, res) {
 // EDIT PRODUCT
 // ===============================
 
-app.put("/products/:index", function (req, res) {
+app.put("/products/:id", async function (req, res) {
 
-    const index = Number(req.params.index);
+    const id = Number(req.params.id);
 
     const updatedProduct = req.body;
 
-    const data = fs.readFileSync(DATA_FILE, "utf8");
+    const { data, error } = await supabase
+        .from("products")
+        .update(updatedProduct)
+        .eq("id", id)
+        .select();
 
-    const products = JSON.parse(data);
+    if (error) {
+        console.error(error);
 
+        return res.status(500).json({
+            message: "Could not update product"
+        });
+    }
 
-    if (index < 0 || index >= products.length) {
-
+    if (!data || data.length === 0) {
         return res.status(404).json({
             message: "Product not found"
         });
-
     }
 
-
-    products[index] = updatedProduct;
-
-
-    fs.writeFileSync(
-        DATA_FILE,
-        JSON.stringify(products, null, 2)
-    );
-
-
     res.json({
-        message: "Product updated successfully"
+        message: "Product updated successfully",
+        product: data[0]
     });
-
 });
 
 
@@ -100,37 +114,26 @@ app.put("/products/:index", function (req, res) {
 // DELETE PRODUCT
 // ===============================
 
-app.delete("/products/:index", function (req, res) {
+app.delete("/products/:id", async function (req, res) {
 
-    const index = Number(req.params.index);
+    const id = Number(req.params.id);
 
-    const data = fs.readFileSync(DATA_FILE, "utf8");
+    const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", id);
 
-    const products = JSON.parse(data);
+    if (error) {
+        console.error(error);
 
-
-    if (index < 0 || index >= products.length) {
-
-        return res.status(404).json({
-            message: "Product not found"
+        return res.status(500).json({
+            message: "Could not delete product"
         });
-
     }
-
-
-    products.splice(index, 1);
-
-
-    fs.writeFileSync(
-        DATA_FILE,
-        JSON.stringify(products, null, 2)
-    );
-
 
     res.json({
         message: "Product deleted successfully"
     });
-
 });
 
 
@@ -139,11 +142,15 @@ app.delete("/products/:index", function (req, res) {
 // ===============================
 
 if (require.main === module) {
+
     app.listen(PORT, function () {
+
         console.log(
             `Server is running on http://localhost:${PORT}`
         );
+
     });
+
 }
 
 module.exports = app;

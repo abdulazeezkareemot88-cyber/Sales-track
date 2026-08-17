@@ -9,7 +9,7 @@ const searchInput = document.getElementById("search");
 const statusMessage = document.getElementById("statusMessage");
 
 let products = [];
-let editingIndex = null;
+let editingId = null;
 
 
 // ===============================
@@ -36,7 +36,7 @@ function clearInputs() {
     priceInput.value = "";
     quantityInput.value = "";
 
-    editingIndex = null;
+    editingId = null;
 
     addBtn.textContent = "Add Product";
 
@@ -53,12 +53,14 @@ function displayProducts(list = products) {
 
     if (!Array.isArray(list) || list.length === 0) {
 
-        productContainer.innerHTML = "<p>No products available.</p>";
+        productContainer.innerHTML =
+            "<p>No products available.</p>";
 
         return;
     }
 
-    list.forEach(function (product, index) {
+
+    list.forEach(function (product) {
 
         productContainer.innerHTML += `
 
@@ -83,11 +85,11 @@ function displayProducts(list = products) {
 
                 <p>
                     <strong>Total Value:</strong>
-                    $${product.price * product.quantity}
+                    $${Number(product.price) * Number(product.quantity)}
                 </p>
 
                 ${
-                    product.quantity < 5
+                    Number(product.quantity) < 5
                     ? '<span class="low-stock">⚠ Low Stock</span>'
                     : ""
                 }
@@ -96,13 +98,13 @@ function displayProducts(list = products) {
 
                     <button
                         class="edit-btn"
-                        onclick="editProduct(${index})">
+                        onclick="editProduct(${product.id})">
                         Edit
                     </button>
 
                     <button
                         class="delete-btn"
-                        onclick="deleteProduct(${index})">
+                        onclick="deleteProduct(${product.id})">
                         Delete
                     </button>
 
@@ -151,8 +153,9 @@ function updateDashboard() {
 
     products.forEach(function (product) {
 
-        total += Number(product.price) *
-                 Number(product.quantity);
+        total +=
+            Number(product.price) *
+            Number(product.quantity);
 
     });
 
@@ -172,13 +175,18 @@ function loadProducts() {
 
         .then(function (response) {
 
+            if (!response.ok) {
+                throw new Error("Failed to load products");
+            }
+
             return response.json();
 
         })
 
         .then(function (data) {
 
-            products = Array.isArray(data) ? data : [];
+            products =
+                Array.isArray(data) ? data : [];
 
             displayProducts();
 
@@ -186,7 +194,9 @@ function loadProducts() {
 
         })
 
-        .catch(function () {
+        .catch(function (error) {
+
+            console.error(error);
 
             showStatus(
                 "Could not connect to the server.",
@@ -217,7 +227,9 @@ addBtn.addEventListener("click", function () {
         Number(quantityInput.value);
 
 
+    // ===============================
     // VALIDATION
+    // ===============================
 
     if (
         name === "" ||
@@ -234,7 +246,9 @@ addBtn.addEventListener("click", function () {
     }
 
 
-    // CREATE PRODUCT OBJECT
+    // ===============================
+    // PRODUCT DATA
+    // ===============================
 
     const productData = {
 
@@ -244,7 +258,9 @@ addBtn.addEventListener("click", function () {
 
         price: price,
 
-        quantity: quantity
+        quantity: quantity,
+
+        date: new Date().toLocaleDateString()
 
     };
 
@@ -253,7 +269,7 @@ addBtn.addEventListener("click", function () {
     // ADD PRODUCT
     // ===============================
 
-    if (editingIndex === null) {
+    if (editingId === null) {
 
         fetch("/products", {
 
@@ -268,6 +284,10 @@ addBtn.addEventListener("click", function () {
         })
 
         .then(function (response) {
+
+            if (!response.ok) {
+                throw new Error("Failed to add product");
+            }
 
             return response.json();
 
@@ -306,7 +326,7 @@ addBtn.addEventListener("click", function () {
 
     } else {
 
-        fetch(`/products/${editingIndex}`, {
+        fetch(`/products/${editingId}`, {
 
             method: "PUT",
 
@@ -319,6 +339,10 @@ addBtn.addEventListener("click", function () {
         })
 
         .then(function (response) {
+
+            if (!response.ok) {
+                throw new Error("Failed to update product");
+            }
 
             return response.json();
 
@@ -359,43 +383,83 @@ addBtn.addEventListener("click", function () {
 // EDIT PRODUCT
 // ===============================
 
-function editProduct(index) {
+function editProduct(id) {
 
-    productNameInput.value = products[index].name;
+    const product = products.find(function (product) {
 
-    categoryInput.value = products[index].category;
+        return Number(product.id) === Number(id);
 
-    priceInput.value = products[index].price;
+    });
 
-    quantityInput.value = products[index].quantity;
 
-    editingIndex = index;
+    if (!product) {
 
-    addBtn.textContent = "Update Product";
+        showStatus(
+            "Product not found.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    productNameInput.value =
+        product.name;
+
+    categoryInput.value =
+        product.category;
+
+    priceInput.value =
+        product.price;
+
+    quantityInput.value =
+        product.quantity;
+
+
+    editingId = product.id;
+
+
+    addBtn.textContent =
+        "Update Product";
 
 }
+
 
 // ===============================
 // DELETE PRODUCT
 // ===============================
 
-function deleteProduct(index) {
+function deleteProduct(id) {
 
     if (!confirm("Delete this product?")) {
         return;
     }
 
-    fetch(`/products/${index}`, {
+
+    fetch(`/products/${id}`, {
+
         method: "DELETE"
+
     })
 
     .then(function (response) {
+
+        if (!response.ok) {
+            throw new Error("Failed to delete product");
+        }
+
         return response.json();
+
     })
 
     .then(function (data) {
 
         console.log(data);
+
+        showStatus(
+            "Product deleted successfully.",
+            "success"
+        );
 
         loadProducts();
 
@@ -404,6 +468,11 @@ function deleteProduct(index) {
     .catch(function (error) {
 
         console.error(error);
+
+        showStatus(
+            "Could not delete product.",
+            "error"
+        );
 
     });
 
@@ -416,23 +485,36 @@ function deleteProduct(index) {
 
 searchInput.addEventListener("input", function () {
 
-    const keyword = searchInput.value.toLowerCase().trim();
+    const keyword =
+        searchInput.value
+            .toLowerCase()
+            .trim();
 
-    const filteredProducts = products.filter(function (product) {
 
-        const productName = String(product.name).toLowerCase();
-        const productCategory = String(product.category).toLowerCase();
+    const filteredProducts =
+        products.filter(function (product) {
 
-        return (
-            productName.includes(keyword) ||
-            productCategory.includes(keyword)
-        );
+            const productName =
+                String(product.name)
+                    .toLowerCase();
 
-    });
+            const productCategory =
+                String(product.category)
+                    .toLowerCase();
+
+
+            return (
+                productName.includes(keyword) ||
+                productCategory.includes(keyword)
+            );
+
+        });
+
 
     displayProducts(filteredProducts);
 
 });
+
 
 // ===============================
 // INITIAL LOAD
